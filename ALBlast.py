@@ -1,5 +1,4 @@
 import os
-import subprocess
 import pandas as pd
 import requests
 import streamlit as st
@@ -9,27 +8,6 @@ from Bio import SeqIO
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
-# Ensure BLAST+ is installed and available locally
-def install_blast():
-    blast_dir = "blast_bin"
-    if not os.path.exists(blast_dir):
-        os.makedirs(blast_dir)
-        print("⚠️ BLAST+ not found. Downloading now...")
-
-        # Download BLAST+ for Linux (precompiled binary)
-        blast_url = "https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.13.0+-x64-linux.tar.gz"
-        blast_tar = os.path.join(blast_dir, "blast.tar.gz")
-
-        subprocess.run(["wget", "-O", blast_tar, blast_url], check=True)
-        subprocess.run(["tar", "-xzf", blast_tar, "-C", blast_dir, "--strip-components=1"], check=True)
-        os.remove(blast_tar)  # Clean up tar file
-
-        print("✅ BLAST+ installed successfully.")
-
-    # Set BLAST path for use in the script
-    os.environ["PATH"] = os.path.abspath(blast_dir) + ":" + os.environ["PATH"]
-
-
 # Streamlit UI
 st.title("🔬 BLAST Analysis Tool")
 st.write("Upload your .ab1 files, and the script will process them, create a BLAST database, run alignments, and generate an Excel summary.")
@@ -38,22 +16,58 @@ st.write("Upload your .ab1 files, and the script will process them, create a BLA
 uploaded_files = st.file_uploader("Upload .ab1 Files", type=["ab1"], accept_multiple_files=True)
 reference_file = st.file_uploader("Upload Reference Sequence (.txt)", type=["txt"])
 
+def run_ncbi_blast(query_fasta, output_file):
+    url = "https://blast.ncbi.nlm.nih.gov/Blast.cgi"
+    
+    with open(query_fasta, "r") as f:
+        query_seq = f.read()
+    
+    params = {
+        "CMD": "Put",
+        "PROGRAM": "blastn",
+        "DATABASE": "nt",
+        "QUERY": query_seq,
+        "FORMAT_TYPE": "Text"
+    }
+    response = requests.post(url, data=params)
+    
+    if "RID" not in response.text:
+        raise ValueError("BLAST job submission failed.")
+    
+    rid = response.text.split("RID = ")[1].split("\n")[0].strip()
+    print(f"BLAST job submitted. Request ID: {rid}")
+    
+    time.sleep(30)
+    
+    params_check = {
+        "CMD": "Get",
+        "RID": rid,
+        "FORMAT_TYPE": "Text"
+    }
+    
+    while True:
+        result = requests.get(url, params=params_check)
+        if "Status=READY" in result.text:
+            break
+        time.sleep(10)
+    
+    with open(output_file, "w") as f:
+        f.write(result.text)
+    print("BLAST results saved.")
+
 if uploaded_files and reference_file:
     with st.spinner("Processing files..."):
         base_dir = "blast_workspace"
         fasta_dir = os.path.join(base_dir, "FASTA_Files")
         blast_output_dir = os.path.join(base_dir, "BLAST_Results")
-        blast_db_dir = os.path.join(base_dir, "BLAST_DB")
-
         os.makedirs(fasta_dir, exist_ok=True)
         os.makedirs(blast_output_dir, exist_ok=True)
-        os.makedirs(blast_db_dir, exist_ok=True)
-
+        
         reference_fasta = os.path.join(base_dir, "reference.fasta")
         with open(reference_fasta, "w") as ref_fasta:
             ref_fasta.write(">Reference_Sequence\n")
             ref_fasta.write(reference_file.getvalue().decode("utf-8"))
-
+        
         for uploaded_file in uploaded_files:
             file_path = os.path.join(fasta_dir, uploaded_file.name.replace(".ab1", ".fasta"))
             with open(file_path, "w") as fasta_file:
@@ -62,21 +76,17 @@ if uploaded_files and reference_file:
                 record.letter_annotations = {}
                 record.seq = trimmed_seq
                 SeqIO.write(record, fasta_file, "fasta")
-
+        
         st.success("✅ Files converted to FASTA successfully!")
-
-        blast_db_path = os.path.join(blast_db_dir, "reference_db")
-
-        st.success("✅ BLAST database created successfully!")
-
+        
         summary_data = []
-        for fasta_bfile in os.listdir(fasta_dir):
+        for fasta_file in os.listdir(fasta_dir):
+            if not fasta_file.endswith(".fasta"):
+                continue
             query_fasta = os.path.join(fasta_dir, fasta_file)
             output_file = os.path.join(blast_output_dir, fasta_file.replace(".fasta", "_blast_results.txt"))
-            
-            #Use NCBI BLAST API instead of local execution
             run_ncbi_blast(query_fasta, output_file)
-
+            
             if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
                 score, expect, identities, gaps, strand = "", "", "", "", ""
                 with open(output_file, "r") as file:
@@ -84,46 +94,19 @@ if uploaded_files and reference_file:
                         if "Score =" in line:
                             score = line.split("=")[1].strip().split()[0]
                         elif "Expect =" in line:
-                            expect = line.split('=')[1].strip().split()[0] if '=' in line and len(line.split('=')) > 1 else 'N/A' if "=" in line else "N/A"
-                            expect = line.split("=")[-1].strip().split()[0] if "=" in line else "N/A"
-                            expect = line.split("=")[1].strip().split()[0] if "=" in line and len(line.split("=")) > 1 else "N/A"
-                            expect = line.split("=")[1].strip().split()[0] if "=" in line else ""
-                            expect = line.split("=")[1].strip().split()[0]
+                            expect = line.split("=")[1].strip().split()[0] if "=" in line else "N/A"
                         elif "Identities =" in line:
                             identities = line.split("=")[1].strip().split(",")[0]
                         elif "Gaps =" in line:
-                            gaps = line.split('=')[1].strip().split(',')[0] if '=' in line and len(line.split('=')) > 1 else 'N/A' if "=" in line else "N/A"
-                            gaps = line.split("=")[-1].strip().split(",")[0] if "=" in line else "N/A"
-                            gaps = line.split("=")[1].strip().split(",")[0] if "=" in line and len(line.split("=")) > 1 else "N/A"
-                            gaps = line.split("=")[1].strip().split(",")[0] if "=" in line else ""
-                            gaps = line.split("=")[1].strip().split(",")[0]
+                            gaps = line.split("=")[1].strip().split(",")[0] if "=" in line else "N/A"
                         elif "Strand =" in line:
                             strand = line.split("=")[1].strip()
-                    summary_data.append([fasta_file, score, expect, identities, gaps, strand])
+                summary_data.append([fasta_file, score, expect, identities, gaps, strand])
             else:
                 st.error(f"❌ No BLAST output found for {fasta_file}. Check your input sequences!")
-
+        
         st.success("✅ BLAST alignment completed!")
-
-        # 🔹 Step 1: Create a ZIP file with all BLAST result .txt files
-        zip_path = os.path.join(blast_output_dir, "BLAST_Results.zip")
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for txt_file in os.listdir(blast_output_dir):
-                if txt_file.endswith(".txt"):
-                    zipf.write(os.path.join(blast_output_dir, txt_file), arcname=txt_file)
-
-        st.success("✅ BLAST alignment files added to ZIP!")
-
-        # 🔹 Step 2: Provide a download button for the ZIP file
-        with open(zip_path, "rb") as zip_file:
-            st.download_button(
-                label="📥 Download BLAST Alignments (ZIP)",
-                data=zip_file,
-                file_name="BLAST_Results.zip",
-                mime="application/zip"
-            )
-
-        # 🔹 Step 3: Generate Excel summary with BLAST metrics
+        
         excel_summary_file = os.path.join(blast_output_dir, "BLAST_Summary.xlsx")
         wb = Workbook()
         ws = wb.active
@@ -134,8 +117,7 @@ if uploaded_files and reference_file:
             ws.append(row)
         wb.save(excel_summary_file)
         st.success("✅ BLAST summary saved!")
-
-        # 🔹 Step 4: Provide a download link for the Excel summary
+        
         with open(excel_summary_file, "rb") as f:
             st.download_button(
                 label="📥 Download BLAST Summary",
