@@ -1,7 +1,9 @@
 import os
 import subprocess
 import pandas as pd
+import requests
 import streamlit as st
+import time
 import zipfile
 from Bio import SeqIO
 from openpyxl import Workbook
