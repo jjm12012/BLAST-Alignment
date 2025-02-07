@@ -7,6 +7,20 @@ from Bio import SeqIO
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
+# Ensure BLAST+ is installed
+def install_blast():
+    blast_path = "blastn"  # Command to check if BLAST is installed
+    try:
+        subprocess.run([blast_path, "-version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("✅ BLAST+ is already installed.")
+    except FileNotFoundError:
+        print("⚠️ BLAST+ not found. Installing it now...")
+        subprocess.run("apt-get update && apt-get install -y ncbi-blast+", shell=True, check=True)
+        print("✅ BLAST+ installed successfully.")
+
+# Install BLAST+ before running any BLAST commands
+install_blast()
+
 # Streamlit UI
 st.title("🔬 BLAST Analysis Tool")
 st.write("Upload your .ab1 files, and the script will process them, create a BLAST database, run alignments, and generate an Excel summary.")
