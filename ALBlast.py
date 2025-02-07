@@ -69,6 +69,8 @@ if uploaded_files and reference_file:
             ref_fasta.write(reference_file.getvalue().decode("utf-8"))
         
         for uploaded_file in uploaded_files:
+            if not isinstance(uploaded_file, str):
+                uploaded_file = uploaded_file.name
             file_path = os.path.join(fasta_dir, uploaded_file.name.replace(".ab1", ".fasta"))
             with open(file_path, "w") as fasta_file:
                 record = SeqIO.read(uploaded_file, "abi")
@@ -83,7 +85,7 @@ if uploaded_files and reference_file:
         for fasta_file in os.listdir(fasta_dir):
             if not fasta_file.endswith(".fasta"):
                 continue
-            query_fasta = os.path.join(fasta_dir, fasta_file)
+            query_fasta = os.path.join(fasta_dir, str(fasta_file))
             output_file = os.path.join(blast_output_dir, fasta_file.replace(".fasta", "_blast_results.txt"))
             run_ncbi_blast(query_fasta, output_file)
             
