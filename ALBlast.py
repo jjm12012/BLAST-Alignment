@@ -70,14 +70,10 @@ if uploaded_files and reference_file:
         
         for uploaded_file in uploaded_files:
             fasta_filename = uploaded_file.name if hasattr(uploaded_file, 'name') else str(uploaded_file)
-            if hasattr(uploaded_file, 'name'):
-                uploaded_filename = uploaded_file.name
-            else:
-                uploaded_filename = str(uploaded_file)
+            uploaded_filename = uploaded_file.name if isinstance(uploaded_file, st.runtime.uploaded_file_manager.UploadedFile) else str(uploaded_file)
             file_path = os.path.join(fasta_dir, uploaded_filename.replace(".ab1", ".fasta"))
             with open(file_path, "w") as fasta_file:
-                with open(uploaded_file, "rb") as up_file:
-                    record = SeqIO.read(up_file, "abi")
+                record = SeqIO.read(uploaded_file, "abi") if isinstance(uploaded_file, st.runtime.uploaded_file_manager.UploadedFile) else SeqIO.read(open(uploaded_file, "rb"), "abi")
                 record = SeqIO.read(up_file, "abi")
                 trimmed_seq = record.seq[20:]
                 record.letter_annotations = {}
