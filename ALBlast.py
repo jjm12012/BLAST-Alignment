@@ -7,16 +7,25 @@ from Bio import SeqIO
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
-# Ensure BLAST+ is installed
+# Ensure BLAST+ is installed and available locally
 def install_blast():
-    blast_path = "blastn"  # Command to check if BLAST is installed
-    try:
-        subprocess.run([blast_path, "-version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print("✅ BLAST+ is already installed.")
-    except FileNotFoundError:
-        print("⚠️ BLAST+ not found. Installing it now...")
-        subprocess.run("apt-get update && apt-get install -y ncbi-blast+", shell=True, check=True)
+    blast_dir = "blast_bin"
+    if not os.path.exists(blast_dir):
+        os.makedirs(blast_dir)
+        print("⚠️ BLAST+ not found. Downloading now...")
+
+        # Download BLAST+ for Linux (precompiled binary)
+        blast_url = "https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.13.0+-x64-linux.tar.gz"
+        blast_tar = os.path.join(blast_dir, "blast.tar.gz")
+
+        subprocess.run(["wget", "-O", blast_tar, blast_url], check=True)
+        subprocess.run(["tar", "-xzf", blast_tar, "-C", blast_dir, "--strip-components=1"], check=True)
+        os.remove(blast_tar)  # Clean up tar file
+
         print("✅ BLAST+ installed successfully.")
+
+    # Set BLAST path for use in the script
+    os.environ["PATH"] = os.path.abspath(blast_dir) + ":" + os.environ["PATH"]
 
 # Install BLAST+ before running any BLAST commands
 install_blast()
@@ -57,7 +66,7 @@ if uploaded_files and reference_file:
         st.success("✅ Files converted to FASTA successfully!")
 
         blast_db_path = os.path.join(blast_db_dir, "reference_db")
-        makeblastdb_cmd = f'makeblastdb -in "{reference_fasta}" -dbtype nucl -out "{blast_db_path}"'
+        makeblastdb_cmd = f'./blast_bin/makeblastdb -in "{reference_fasta}" -dbtype nucl -out "{blast_db_path}"'
         subprocess.run(makeblastdb_cmd, shell=True, check=True)
 
         st.success("✅ BLAST database created successfully!")
@@ -66,7 +75,7 @@ if uploaded_files and reference_file:
         for fasta_file in os.listdir(fasta_dir):
             query_fasta = os.path.join(fasta_dir, fasta_file)
             output_file = os.path.join(blast_output_dir, fasta_file.replace(".fasta", "_blast_results.txt"))
-            blastn_cmd = f'blastn -query "{query_fasta}" -db "{blast_db_path}" -out "{output_file}" -outfmt "0"'
+            blastn_cmd = f'./blast_bin/blastn -query "{query_fasta}" -db "{blast_db_path}" -out "{output_file}" -outfmt "0"'
             subprocess.run(blastn_cmd, shell=True, check=True)
 
             if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
