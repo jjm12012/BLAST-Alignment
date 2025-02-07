@@ -10,7 +10,7 @@ from openpyxl.styles import PatternFill
 
 # Streamlit UI
 st.title("🔬 BLAST Analysis Tool")
-st.write("Upload your .ab1 files, and the script will process them, create a BLAST database, run alignments, and generate an Excel summary.")
+st.write("Upload your .ab1 files, and the script will process them, run alignments, and generate an Excel summary.")
 
 # Step 1: File Upload
 uploaded_files = st.file_uploader("Upload .ab1 Files", type=["ab1"], accept_multiple_files=True)
@@ -31,11 +31,6 @@ def run_ncbi_blast(query_fasta, output_file):
     }
     headers = {'User-Agent': 'Mozilla/5.0'}  # Helps avoid request blocking
     response = requests.post(url, data=params, headers=headers)
-        "DATABASE": "nt",
-        "QUERY": query_seq,
-        "FORMAT_TYPE": "Text"
-    }
-    response = requests.post(url, data=params)
     
     if "RID" not in response.text:
         raise ValueError("BLAST job submission failed.")
@@ -70,31 +65,15 @@ if uploaded_files and reference_file:
         os.makedirs(blast_output_dir, exist_ok=True)
         
         reference_fasta = os.path.join(base_dir, "reference.fasta")
-        if reference_file is not None:
-            with open(reference_fasta, "w") as ref_fasta:
-                ref_fasta.write(">Reference_Sequence
-")
-            if hasattr(reference_file, 'getvalue'):
-                ref_fasta.write(reference_file.getvalue().decode("utf-8"))
+        with open(reference_fasta, "w") as ref_fasta:
+            ref_fasta.write(">Reference_Sequence\n")
+            ref_fasta.write(reference_file.getvalue().decode("utf-8"))
         
         for uploaded_file in uploaded_files:
             fasta_filename = uploaded_file.name if hasattr(uploaded_file, 'name') else str(uploaded_file)
-            uploaded_filename = uploaded_file.name if hasattr(uploaded_file, 'name') else str(uploaded_file)
-            if uploaded_filename and isinstance(uploaded_filename, str):
-                file_path = os.path.join(fasta_dir, uploaded_filename.replace(".ab1", ".fasta"))
-                file_path = os.path.join(fasta_dir, uploaded_filename.replace(".ab1", ".fasta"))
+            file_path = os.path.join(fasta_dir, fasta_filename.replace(".ab1", ".fasta"))
+            
             with open(file_path, "w") as fasta_file:
-                if isinstance(uploaded_file, st.runtime.uploaded_file_manager.UploadedFile):
-                    up_file = uploaded_file
-                else:
-                    with open(uploaded_file, "rb") as up_file:
-                        record = SeqIO.read(up_file, "abi")
-            else:
-                up_file = open(uploaded_file, "rb")
-            else:
-                up_file = open(uploaded_file, "rb")
-            record = SeqIO.read(up_file, "abi")
-                record = SeqIO.read(up_file, "abi") if isinstance(uploaded_file, st.runtime.uploaded_file_manager.UploadedFile) else SeqIO.read(open(uploaded_file, "rb"), "abi")
                 record = SeqIO.read(uploaded_file, "abi")
                 trimmed_seq = record.seq[20:]
                 record.letter_annotations = {}
@@ -107,7 +86,7 @@ if uploaded_files and reference_file:
         for fasta_file in os.listdir(fasta_dir):
             if not fasta_file.endswith(".fasta"):
                 continue
-            query_fasta = os.path.join(fasta_dir, str(fasta_file))
+            query_fasta = os.path.join(fasta_dir, fasta_file)
             output_file = os.path.join(blast_output_dir, fasta_file.replace(".fasta", "_blast_results.txt"))
             run_ncbi_blast(query_fasta, output_file)
             
