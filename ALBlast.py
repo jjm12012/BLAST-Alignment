@@ -65,9 +65,12 @@ if uploaded_files and reference_file:
         os.makedirs(blast_output_dir, exist_ok=True)
         
         reference_fasta = os.path.join(base_dir, "reference.fasta")
-        with open(reference_fasta, "w") as ref_fasta:
-            ref_fasta.write(">Reference_Sequence\n")
-            ref_fasta.write(reference_file.getvalue().decode("utf-8"))
+        if reference_file is not None and hasattr(reference_file, 'getvalue'):
+                with open(reference_fasta, "w") as ref_fasta:
+                    ref_fasta.write(">Reference_Sequence
+")
+                    if hasattr(reference_file, 'getvalue'):
+                            ref_fasta.write(reference_file.getvalue().decode("utf-8"))
         
         for uploaded_file in uploaded_files:
             fasta_filename = uploaded_file.name if hasattr(uploaded_file, 'name') else str(uploaded_file)
