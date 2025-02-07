@@ -27,8 +27,6 @@ def install_blast():
     # Set BLAST path for use in the script
     os.environ["PATH"] = os.path.abspath(blast_dir) + ":" + os.environ["PATH"]
 
-# Install BLAST+ before running any BLAST commands
-install_blast()
 
 # Streamlit UI
 st.title("🔬 BLAST Analysis Tool")
@@ -66,17 +64,16 @@ if uploaded_files and reference_file:
         st.success("✅ Files converted to FASTA successfully!")
 
         blast_db_path = os.path.join(blast_db_dir, "reference_db")
-        makeblastdb_cmd = f'./blast_bin/makeblastdb -in "{reference_fasta}" -dbtype nucl -out "{blast_db_path}"'
-        subprocess.run(makeblastdb_cmd, shell=True, check=True)
 
         st.success("✅ BLAST database created successfully!")
 
         summary_data = []
-        for fasta_file in os.listdir(fasta_dir):
+        for fasta_bfile in os.listdir(fasta_dir):
             query_fasta = os.path.join(fasta_dir, fasta_file)
             output_file = os.path.join(blast_output_dir, fasta_file.replace(".fasta", "_blast_results.txt"))
-            blastn_cmd = f'./blast_bin/blastn -query "{query_fasta}" -db "{blast_db_path}" -out "{output_file}" -outfmt "0"'
-            subprocess.run(blastn_cmd, shell=True, check=True)
+            
+            #Use NCBI BLAST API instead of local execution
+            run_ncbi_blast(query_fasta, output_file)
 
             if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
                 score, expect, identities, gaps, strand = "", "", "", "", ""
