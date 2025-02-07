@@ -77,6 +77,7 @@ if uploaded_files and reference_file:
             file_path = os.path.join(fasta_dir, uploaded_filename.replace(".ab1", ".fasta"))
             with open(file_path, "w") as fasta_file:
                 with open(uploaded_file, "rb") as up_file:
+                    record = SeqIO.read(up_file, "abi")
                 record = SeqIO.read(up_file, "abi")
                 trimmed_seq = record.seq[20:]
                 record.letter_annotations = {}
