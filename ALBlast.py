@@ -66,11 +66,13 @@ if uploaded_files and reference_file:
         
         reference_fasta = os.path.join(base_dir, "reference.fasta")
         if reference_file is not None and hasattr(reference_file, 'getvalue'):
-                with open(reference_fasta, "w") as ref_fasta:
-                    ref_fasta.write(">Reference_Sequence
-")
-                    if hasattr(reference_file, 'getvalue'):
-                            ref_fasta.write(reference_file.getvalue().decode("utf-8"))
+            reference_content = reference_file.getvalue().decode("utf-8").strip()  # Convert to string
+            reference_fasta_content = ">Reference_Sequence\n" + reference_content  # Ensure FASTA format
+
+    # Write the processed content to reference.fasta
+    with open(reference_fasta, "w") as ref_fasta:
+        ref_fasta.write(reference_fasta_content)
+
         
         for uploaded_file in uploaded_files:
             fasta_filename = uploaded_file.name if hasattr(uploaded_file, 'name') else str(uploaded_file)
