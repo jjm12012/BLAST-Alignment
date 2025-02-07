@@ -29,6 +29,12 @@ def run_ncbi_blast(query_fasta, output_file):
         "QUERY": query_seq,
         "FORMAT_TYPE": "Text"
     }
+    headers = {'User-Agent': 'Mozilla/5.0'}  # Helps avoid request blocking
+    response = requests.post(url, data=params, headers=headers)
+        "DATABASE": "nt",
+        "QUERY": query_seq,
+        "FORMAT_TYPE": "Text"
+    }
     response = requests.post(url, data=params)
     
     if "RID" not in response.text:
@@ -75,13 +81,15 @@ if uploaded_files and reference_file:
                 file_path = os.path.join(fasta_dir, uploaded_filename.replace(".ab1", ".fasta"))
             with open(file_path, "w") as fasta_file:
                 if isinstance(uploaded_file, st.runtime.uploaded_file_manager.UploadedFile):
-                up_file = uploaded_file
+                    up_file = uploaded_file
+                else:
+                    up_file = open(uploaded_file, "rb")
             else:
                 up_file = open(uploaded_file, "rb")
             else:
                 up_file = open(uploaded_file, "rb")
             record = SeqIO.read(up_file, "abi")
-                record = SeqIO.read(up_file, "abi") if isinstance(uploaded_file, st.runtime.uploaded_file_manager.UploadedFile) else SeqIO.read(open(uploaded_file, "rb"), "abi") if isinstance(uploaded_file, st.runtime.uploaded_file_manager.UploadedFile) else SeqIO.read(open(uploaded_file, "rb"), "abi")
+                record = SeqIO.read(up_file, "abi") if isinstance(uploaded_file, st.runtime.uploaded_file_manager.UploadedFile) else SeqIO.read(open(uploaded_file, "rb"), "abi")
                 record = SeqIO.read(uploaded_file, "abi")
                 trimmed_seq = record.seq[20:]
                 record.letter_annotations = {}
