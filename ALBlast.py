@@ -72,9 +72,9 @@ if uploaded_files and reference_file:
             fasta_filename = uploaded_file.name if hasattr(uploaded_file, 'name') else str(uploaded_file)
             if not isinstance(uploaded_file, str):
                 uploaded_file = uploaded_file.name
-            file_path = os.path.join(fasta_dir, fasta_filename.replace(".ab1", ".fasta"))
+            file_path = os.path.join(fasta_dir, str(fasta_filename).replace(".ab1", ".fasta"))
             with open(file_path, "w") as fasta_file:
-                record = SeqIO.read(uploaded_file, "abi") if hasattr(uploaded_file, 'read') else SeqIO.read(open(uploaded_file, "rb"), "abi")
+                record = SeqIO.read(uploaded_file, "abi") if isinstance(uploaded_file, (str, bytes, os.PathLike)) else SeqIO.read(uploaded_file, "abi")
                 trimmed_seq = record.seq[20:]
                 record.letter_annotations = {}
                 record.seq = trimmed_seq
