@@ -70,20 +70,25 @@ if uploaded_files and reference_file:
         os.makedirs(blast_output_dir, exist_ok=True)
         
         reference_fasta = os.path.join(base_dir, "reference.fasta")
-        with open(reference_fasta, "w") as ref_fasta:
-            ref_fasta.write(">Reference_Sequence\n")
-            ref_fasta.write(reference_file.getvalue().decode("utf-8"))
+        if reference_file is not None:
+            with open(reference_fasta, "w") as ref_fasta:
+                ref_fasta.write(">Reference_Sequence
+")
+            if hasattr(reference_file, 'getvalue'):
+                ref_fasta.write(reference_file.getvalue().decode("utf-8"))
         
         for uploaded_file in uploaded_files:
             fasta_filename = uploaded_file.name if hasattr(uploaded_file, 'name') else str(uploaded_file)
             uploaded_filename = uploaded_file.name if hasattr(uploaded_file, 'name') else str(uploaded_file)
             if uploaded_filename and isinstance(uploaded_filename, str):
                 file_path = os.path.join(fasta_dir, uploaded_filename.replace(".ab1", ".fasta"))
+                file_path = os.path.join(fasta_dir, uploaded_filename.replace(".ab1", ".fasta"))
             with open(file_path, "w") as fasta_file:
                 if isinstance(uploaded_file, st.runtime.uploaded_file_manager.UploadedFile):
                     up_file = uploaded_file
                 else:
-                    up_file = open(uploaded_file, "rb")
+                    with open(uploaded_file, "rb") as up_file:
+                        record = SeqIO.read(up_file, "abi")
             else:
                 up_file = open(uploaded_file, "rb")
             else:
