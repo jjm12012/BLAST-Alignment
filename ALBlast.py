@@ -70,7 +70,7 @@ if uploaded_files and reference_file:
         
         for uploaded_file in uploaded_files:
             fasta_filename = uploaded_file.name if hasattr(uploaded_file, 'name') else str(uploaded_file)
-            if not isinstance(uploaded_file, str):
+            if hasattr(uploaded_file, 'read'):
                 uploaded_file = uploaded_file.name
             file_path = os.path.join(fasta_dir, str(fasta_filename).replace(".ab1", ".fasta"))
             with open(file_path, "w") as fasta_file:
