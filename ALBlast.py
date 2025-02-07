@@ -70,12 +70,14 @@ if uploaded_files and reference_file:
         
         for uploaded_file in uploaded_files:
             fasta_filename = uploaded_file.name if hasattr(uploaded_file, 'name') else str(uploaded_file)
-            uploaded_filename = uploaded_file.name if hasattr(uploaded_file, 'name') else None
-            if uploaded_filename:
+            uploaded_filename = uploaded_file.name if hasattr(uploaded_file, 'name') else str(uploaded_file)
+            if uploaded_filename and isinstance(uploaded_filename, str):
                 file_path = os.path.join(fasta_dir, uploaded_filename.replace(".ab1", ".fasta"))
             with open(file_path, "w") as fasta_file:
                 if isinstance(uploaded_file, st.runtime.uploaded_file_manager.UploadedFile):
                 up_file = uploaded_file
+            else:
+                up_file = open(uploaded_file, "rb")
             else:
                 up_file = open(uploaded_file, "rb")
             record = SeqIO.read(up_file, "abi")
